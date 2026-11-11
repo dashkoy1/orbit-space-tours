@@ -244,11 +244,11 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
 
 <script>
 (() => {
-  /* ===== clips: one all-intra mp4 per clip (built from frames/ by build_video.py) ===== */
-  const FPS = 24;
-  const CLIPS = { ea: { n: 97 }, eb: { n: 97 } };
-  ['k1','k2','k3','k4','k5','k6','k7','kx','d1','d2','d3','d4','d5','d6','dx','i0','i1','i2','i3','i4','ix','n0','n1','n2','n3'].forEach(k => CLIPS[k] = { n: 73 });
-  for (const k in CLIPS) CLIPS[k].src = 'video/' + k + '.mp4';
+  /* ===== the film: all clips back to back in one all-intra mp4 (montage by build_video.py) ===== */
+  const FPS = 24, FILM = 'video/film.mp4';
+  const ORDER = ['ea','eb','k1','k2','k3','k4','k5','k6','k7','kx','d1','d2','d3','d4','d5','d6','dx','i0','i1','i2','i3','i4','ix','n0','n1','n2','n3'];
+  const CLIPS = {};
+  { let t = 0; for (const k of ORDER) { const n = k[0] === 'e' ? 97 : 73; CLIPS[k] = { n, f0: t }; t += n; } }   /* f0: first frame in the film */
 
   /* ===== tours (texts from the scenario) ===== */
   const TOURS = [
@@ -295,48 +295,26 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
   const ease = t => t * t * (3 - 2 * t);
   const lerp = (a, b, t) => a + (b - a) * t;
 
-  /* ===== loading: a <video> per clip, kept only for clips in a window around the viewer ===== */
-  for (const s of SEGS) { const cl = CLIPS[s.c]; cl.u0 = Math.min(cl.u0 ?? 1e9, s.u0); cl.u1 = Math.max(cl.u1 ?? -1e9, s.u1); }
-  CLIPS.ea.u0 = 0;
-  const AHEAD = 6, BEHIND = 2;
+  /* ===== loading: one <video>, seeked to the frame the scroll points at ===== */
   let curU = 0, dirty = true;
-  const vids = {};
-  function wanted(c) {
-    const cl = CLIPS[c];
-    if (c === 'ea' && curU > M.end - AHEAD) return true;   /* Earth from afar for the final */
-    return cl.u1 > curU - BEHIND && cl.u0 < curU + AHEAD;
-  }
-  function manage() {
-    for (const c in CLIPS) {
-      const w = wanted(c);
-      if (w && !vids[c]) {
-        const v = document.createElement('video');
-        v.muted = true; v.playsInline = true; v.preload = 'auto';
-        v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
-        v.onloadeddata = v.onseeked = () => { dirty = true; status(); };
-        v.src = CLIPS[c].src;
-        vids[c] = v;
-      } else if (!w && vids[c]) {
-        vids[c].removeAttribute('src'); vids[c].load(); delete vids[c];
-      }
-    }
-  }
-  /* ask a clip's video for frame f; returns the element once it has a picture to draw */
+  const vid = document.createElement('video');
+  vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
+  vid.setAttribute('muted', ''); vid.setAttribute('playsinline', '');
+  vid.onloadeddata = vid.onseeked = () => { dirty = true; status(); };
+  vid.src = FILM;
+  /* ask the film for frame f of clip c; returns the element once it has a picture to draw */
   function frameOf(c, f) {
-    const v = vids[c]; if (!v) return null;
-    if (v.readyState >= 1) {
-      const t = Math.min((f + 0.5) / FPS, v.duration - 0.001);
-      if (!v.seeking && Math.abs(v.currentTime - t) > 0.4 / FPS) v.currentTime = t;
+    if (vid.readyState >= 1) {
+      const t = Math.min((CLIPS[c].f0 + f + 0.5) / FPS, vid.duration - 0.001);
+      if (!vid.seeking && Math.abs(vid.currentTime - t) > 0.4 / FPS) vid.currentTime = t;
     }
-    return v.readyState >= 2 ? v : null;
+    return vid.readyState >= 2 ? vid : null;
   }
   function status() {
-    const fa = filmAt(curU), v = vids[fa.c], ok = v && v.readyState >= 2;
     const l = $('loader');
-    l.style.opacity = ok ? 0 : 1;
+    l.style.opacity = vid.readyState >= 2 ? 0 : 1;
     l.textContent = 'загрузка маршрута…';
   }
-  manage();
   function filmAt(u) {
     if (u <= SEGS[0].u0) return { c: 'ea', f: 0 };
     for (const s of SEGS) if (u < s.u1) return { c: s.c, f: s.hold ? CLIPS[s.c].n - 1 : seg(u, s.u0, s.u1) * (CLIPS[s.c].n - 1) };
@@ -443,7 +421,7 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
     if (Math.abs(p - pS) < 0.00002) pS = p;
     vel = lerp(vel, Math.abs(pS - prev) * TOTAL / Math.max(raw, 0.001), 0.2);
     const u = pS * TOTAL, t = now / 1000;
-    if (Math.abs(u - curU) > 0.25) { curU = u; manage(); status(); } else curU = u;
+    curU = u;
     curTour = tourAt(u);
 
     /* which jump (cut between tours) are we near? */
@@ -452,11 +430,10 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
 
     /* ---- film ---- */
     const fa = filmAt(u), idx = Math.round(fa.f), key = fa.c + idx + '|' + film.width;
-    const im = frameOf(fa.c, idx), ebIn = fa.c === 'ea' && idx > 88 ? frameOf('eb', 0) : null;
+    const im = frameOf(fa.c, idx);
     if (key !== lastKey || dirty) {
       if (im) {
         fctx.globalAlpha = 1; fctx.fillStyle = '#04060a'; fctx.fillRect(0, 0, film.width, film.height); cover(im, 1);
-        if (ebIn) cover(ebIn, (idx - 88) / 8);
         fctx.globalAlpha = 1;
       }
       lastKey = key; dirty = false;
