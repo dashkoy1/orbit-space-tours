@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Prototype v2. Helmet and HUD below are still temporary placeholders (final helmet frame comes at the end of the project).
+/* Prototype v2. Helmet frame = generated image (img/helmet.webp); HUD below is still a temporary placeholder.
    Layout: fixed full-screen stage, a tall scroll track drives a scene timeline measured in "units" (1 unit ≈ one screen of scroll). */
 :root{
   color-scheme: dark;
@@ -30,11 +30,11 @@ body{overflow-x:hidden}
 #murk{background:radial-gradient(120% 100% at 50% 40%,#0b3a44 0%,#06202a 55%,#03090d 100%)}
 #splash{background:radial-gradient(70% 60% at 50% 55%,rgba(230,255,255,.95) 0%,rgba(120,240,230,.55) 35%,rgba(10,60,70,.0) 75%)}
 
-/* ---------- helmet (placeholder) ---------- */
-#helmet{position:absolute;inset:0;pointer-events:none;opacity:0;transform-origin:50% 46%;will-change:transform,opacity}
-#visor{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;border-radius:33% 33% 30% 30% / 42% 42% 38% 38%;
-  box-shadow:0 0 0 200vmax var(--rim), inset 0 0 0 2px rgba(170,215,240,.22), inset 0 0 9vmax 3vmax rgba(0,0,0,.82), inset 0 1.2vmax 2vmax rgba(150,200,230,.10);
-  overflow:hidden}
+/* ---------- helmet: generated frame (img/helmet.webp, build_helmet.py) ---------- */
+#helmet{position:absolute;inset:0;pointer-events:none;opacity:0;transform-origin:50% 46%;will-change:transform,opacity;overflow:hidden}
+#rim{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;   /* stretched to the screen, so the curved corners show at any aspect */
+  transform:scale(var(--rim-scale,1.38));filter:brightness(var(--rim-dim,.68))}
+#visor{position:absolute;left:4vw;right:4vw;top:6vh;bottom:6vh;border-radius:30% 30% 30% 30% / 42% 42% 42% 42%;overflow:hidden}
 #visor::before{content:"";position:absolute;inset:-10%;
   background:linear-gradient(112deg,transparent 30%,rgba(190,230,255,.07) 38%,transparent 44%,transparent 58%,rgba(190,230,255,.04) 63%,transparent 68%);
   transform:translateX(var(--glare,0px))}
@@ -158,6 +158,7 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
 
   <div id="helmet" aria-hidden="true">
     <div id="visor"><div id="fog"></div></div>
+    <img id="rim" src="img/helmet.webp" alt="">
     <div id="chin"><i></i>ORBIT · MK-IV · ГЕРМЕТИЧНО</div>
   </div>
 
