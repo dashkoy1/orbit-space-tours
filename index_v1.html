@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORBIT прототип полёта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* One visual world (deep space), single theme by choice.
+   Layout: fixed full-screen stage (film → dust → helmet → HUD → page UI), a tall scroll track drives everything. */
+:root{
+  color-scheme: dark;
+  --void:#04060a;
+  --rim:#06080c;
+  --ink:#eef4f8;
+  --ink-dim:rgba(238,244,248,.62);
+  --hud:#8fe9ff;
+  --hud-dim:rgba(143,233,255,.55);
+  --target:#3df0d8;
+  --warn:#ffb057;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--mono)}
+body{overflow-x:hidden}
+#track{height:1000vh}
+#stage{position:fixed;inset:0;overflow:hidden;background:var(--void)}
+#film,#dust{position:absolute;inset:0;width:100%;height:100%;display:block}
+#film{will-change:transform,filter}
+#arrival{position:absolute;inset:0;opacity:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 62%,#0e6f78 0%,#0a3a4f 38%,#07172a 70%,#04060a 100%)}
+#flash{position:absolute;inset:0;background:#eaffff;opacity:0;pointer-events:none}
+
+/* ---------- helmet ---------- */
+#helmet{position:absolute;inset:0;pointer-events:none;opacity:0;transform-origin:50% 46%;will-change:transform,opacity}
+#visor{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;border-radius:33% 33% 30% 30% / 42% 42% 38% 38%;
+  box-shadow:0 0 0 200vmax var(--rim), inset 0 0 0 2px rgba(170,215,240,.22), inset 0 0 9vmax 3vmax rgba(0,0,0,.82), inset 0 1.2vmax 2vmax rgba(150,200,230,.10);
+  overflow:hidden}
+#visor::before{content:"";position:absolute;inset:-10%;
+  background:linear-gradient(112deg,transparent 30%,rgba(190,230,255,.07) 38%,transparent 44%,transparent 58%,rgba(190,230,255,.04) 63%,transparent 68%);
+  transform:translateX(var(--glare,0px))}
+#fog{position:absolute;inset:0;opacity:0;
+  background:radial-gradient(90% 80% at 50% 62%,rgba(205,228,240,.50),rgba(205,228,240,.16) 60%,transparent 85%);
+  -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+#chin{position:absolute;left:50%;bottom:2.2vh;transform:translateX(-50%);display:flex;gap:10px;align-items:center;
+  font-size:10px;letter-spacing:.22em;color:rgba(143,233,255,.38)}
+#chin i{width:6px;height:6px;border-radius:50%;background:var(--target);box-shadow:0 0 8px var(--target)}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;pointer-events:none;color:var(--hud);
+  font-size:clamp(10px,1.05vw,14px);letter-spacing:.14em;text-transform:uppercase;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px rgba(143,233,255,.45),0 1px 3px rgba(0,0,0,.9);opacity:0}
+.h{position:absolute;opacity:0;transition:opacity .25s linear}
+.h.on{opacity:1}
+#h-tl{left:13%;top:15%}
+#h-tr{right:13%;top:15%;text-align:right}
+#h-bl{left:15%;bottom:15%}
+#h-br{right:15%;bottom:15%;text-align:right}
+.h small{display:block;color:var(--hud-dim);font-size:.82em;margin-bottom:.35em}
+.h b{font-weight:500;font-size:1.25em;color:var(--ink)}
+#boot{left:14%;top:50%;transform:translateY(-50%);white-space:pre;line-height:1.9;text-align:left}
+#boot span{display:block;opacity:0;transition:opacity .2s}
+#boot span.on{opacity:1}
+#boot em{font-style:normal;color:var(--target)}
+#say{left:50%;top:50%;transform:translate(-50%,-50%);width:min(80%,900px);text-align:center;
+  font-family:var(--display);font-weight:400;font-size:clamp(20px,3.2vw,46px);letter-spacing:0;line-height:1.2;text-transform:none;color:var(--ink);text-wrap:balance;text-shadow:0 2px 24px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)}
+#reticle{left:50%;top:50%;width:clamp(90px,11vw,150px);aspect-ratio:1;transform:translate(-50%,-50%)}
+#reticle::before,#reticle::after{content:"";position:absolute;inset:0;border:1px solid var(--target);border-radius:50%;opacity:.8}
+#reticle::after{inset:-14%;border-style:dashed;opacity:.35;animation:spin 14s linear infinite}
+#lock{left:50%;top:calc(50% + clamp(70px,8.5vw,115px));transform:translateX(-50%);text-align:center;color:var(--target);white-space:nowrap}
+#lock b{color:var(--ink)}
+#course{left:50%;bottom:7%;transform:translateX(-50%);text-align:center;white-space:nowrap}
+#course b{color:var(--warn)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- page UI: intro ---------- */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;will-change:opacity,transform}
+header{display:flex;align-items:center;gap:28px;padding:22px clamp(16px,4vw,48px);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.logo{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.3em;margin-right:auto}
+header nav{display:flex;gap:28px;color:var(--ink-dim)}
+.btn{font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid rgba(238,244,248,.45);
+  border-radius:999px;padding:12px 22px;cursor:pointer;transition:background .2s,color .2s}
+.btn:hover{background:var(--ink);color:var(--void)}
+.btn:focus-visible{outline:2px solid var(--hud);outline-offset:3px}
+.btn.solid{background:var(--ink);color:var(--void);border-color:var(--ink)}
+.btn.solid:hover{background:transparent;color:var(--ink)}
+.hero{margin-top:auto;padding:0 clamp(16px,4vw,48px) clamp(64px,11vh,120px);max-width:980px}
+.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--hud);margin:0 0 18px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);line-height:1.02;margin:0 0 22px;text-wrap:balance;letter-spacing:-.01em}
+.sub{font-size:clamp(13px,1.15vw,16px);line-height:1.65;color:var(--ink-dim);max-width:52ch;margin:0 0 28px;letter-spacing:.02em}
+.cta{display:flex;flex-wrap:wrap;align-items:center;gap:18px}
+.hint{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
+.hint::after{content:" ↓";display:inline-block;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+.stats{position:absolute;right:clamp(16px,4vw,48px);bottom:clamp(64px,11vh,120px);display:flex;flex-direction:column;gap:14px;text-align:right;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+.stats b{display:block;font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:0;color:var(--ink)}
+
+/* ---------- arrival card ---------- */
+#end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:16px;opacity:0;pointer-events:none}
+#end .eyebrow{color:var(--target);margin:0}
+#end h2{font-family:var(--display);font-weight:600;font-size:clamp(30px,5.4vw,80px);margin:0;line-height:1.05}
+#end p{margin:0;max-width:46ch;font-size:13px;line-height:1.65;color:var(--ink-dim)}
+#end .tag{margin-top:10px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--warn);border:1px solid rgba(255,176,87,.5);padding:7px 12px;border-radius:999px}
+
+#loader{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:10px;letter-spacing:.24em;color:var(--ink-dim);text-transform:uppercase;transition:opacity .6s}
+@media (max-width:760px){
+  header nav{display:none}
+  .stats{display:none}
+  #h-tl,#h-bl{left:9%} #h-tr,#h-br{right:9%}
+  #visor,#hud{left:2vw;right:2vw;top:3vh;bottom:8vh}
+}
+@media (prefers-reduced-motion:reduce){ .hint::after,#reticle::after{animation:none} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="film" aria-label="Полёт к Земле" role="img"></canvas>
+  <div id="arrival"></div>
+  <canvas id="dust" aria-hidden="true"></canvas>
+  <div id="flash"></div>
+
+  <div id="helmet" aria-hidden="true">
+    <div id="visor"><div id="fog"></div></div>
+    <div id="chin"><i></i>ORBIT · MK-IV · ГЕРМЕТИЧНО</div>
+  </div>
+
+  <div id="hud" aria-hidden="true">
+    <div class="h" id="h-tl"><small>ORBIT · пассажир 001</small>O₂ <b id="o2">100</b>%</div>
+    <div class="h" id="h-tr"><small>связь</small><b>стабильна</b></div>
+    <div class="h" id="h-bl"><small id="dist-l">до Земли</small><b id="dist">384 400</b> км</div>
+    <div class="h" id="h-br"><small>скорость</small><b id="spd">0,0</b> км/с</div>
+    <div class="h" id="boot"><span>ШЛЕМ АКТИВИРОВАН</span><span>O₂ ......... <em>100%</em></span><span>СВЯЗЬ ...... <em>СТАБИЛЬНА</em></span><span>ПАССАЖИР ... <em>ГОТОВ</em></span></div>
+    <div class="h" id="say">Дышите спокойно. Мы взлетаем.</div>
+    <div class="h" id="reticle"></div>
+    <div class="h" id="lock">цель захвачена · <b>KEPLER-22b</b></div>
+    <div class="h" id="course">курс: KEPLER-22b · до прыжка <b id="cd">00:12</b></div>
+  </div>
+
+  <div id="intro">
+    <header>
+      <span class="logo">ORBIT</span>
+      <nav><span>Туры</span><span>Как проходит полёт</span><span>Безопасность</span></nav>
+      <button class="btn" id="book" type="button">Забронировать</button>
+    </header>
+    <div class="hero">
+      <p class="eyebrow">Космическое турагентство · сезон 2077 открыт</p>
+      <h1>Земля — только начало</h1>
+      <p class="sub">Четыре планеты, четыре непохожих мира. Туры от 3 до 10 дней: без визы, но с невесомостью.</p>
+      <div class="cta">
+        <button class="btn solid" id="go" type="button">Выбрать планету</button>
+        <span class="hint">Листайте, чтобы надеть шлем</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div><b>4</b>планеты</div>
+      <div><b>12 000</b>световых лет за неделю</div>
+      <div><b>0</b>пассажиров захотели домой раньше</div>
+    </div>
+  </div>
+
+  <div id="end">
+    <p class="eyebrow">Прибытие · KEPLER-22b</p>
+    <h2>Тур 01. Глубина</h2>
+    <p>7 дней в светящемся океане. Подводные отели, киты размером с небоскрёб.</p>
+    <span class="tag">сцена в производстве</span>
+  </div>
+
+  <div id="loader">загрузка маршрута 0%</div>
+</div>
+<div id="track"></div>
+
+<script>
+(() => {
+  const NA = 97, NB = 97, BLEND = 8;
+  const pad = n => String(n).padStart(3, '0');
+  const urls = [];
+  for (let i = 0; i < NA; i++) urls.push('frames/a_' + pad(i) + '.webp');
+  for (let i = 0; i < NB; i++) urls.push('frames/b_' + pad(i) + '.webp');
+  const imgs = new Array(urls.length).fill(null);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const film = $('film'), fctx = film.getContext('2d');
+  const dust = $('dust'), dctx = dust.getContext('2d');
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const seg = (p, a, b) => clamp((p - a) / (b - a));
+  const ease = t => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  /* ---- frame loading: first frame at once, the rest in order with a small pool ---- */
+  let loaded = 0, next = 0;
+  function loadOne() {
+    if (next >= urls.length) return;
+    const i = next++, im = new Image();
+    im.decoding = 'async';
+    im.onload = () => { imgs[i] = im; done(); };
+    im.onerror = done;
+    im.src = urls[i];
+    function done() {
+      loaded++;
+      $('loader').textContent = 'загрузка маршрута ' + Math.round(loaded / urls.length * 100) + '%';
+      if (loaded >= urls.length) $('loader').style.opacity = 0;
+      dirty = true; loadOne();
+    }
+  }
+  for (let k = 0; k < 6; k++) loadOne();
+
+  function nearest(i) { for (let k = i; k >= 0; k--) if (imgs[k]) return imgs[k]; return null; }
+
+  /* ---- sizing ---- */
+  let W = 0, H = 0, dpr = 1, dirty = true;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    for (const c of [film, dust]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    dirty = true;
+  }
+  addEventListener('resize', resize); resize();
+
+  function cover(im, alpha) {
+    const s = Math.max(film.width / im.naturalWidth, film.height / im.naturalHeight);
+    const w = im.naturalWidth * s, h = im.naturalHeight * s;
+    fctx.globalAlpha = alpha;
+    fctx.drawImage(im, (film.width - w) / 2, (film.height - h) / 2, w, h);
+  }
+
+  /* ---- dust: points flying from the centre toward the viewer ---- */
+  const P = Array.from({ length: 170 }, () => spawn({}, true));
+  function spawn(p, any) {
+    p.x = (Math.random() * 2 - 1) * 1.2; p.y = (Math.random() * 2 - 1) * 1.2;
+    p.z = any ? Math.random() * 0.95 + 0.05 : 1; p.px = null; p.py = null; return p;
+  }
+  function drawDust(dt, speed, strength, warp) {
+    dctx.clearRect(0, 0, dust.width, dust.height);
+    if (strength <= 0.002) return;
+    const cx = dust.width / 2, cy = dust.height * 0.5, f = Math.max(dust.width, dust.height) * 0.42;
+    dctx.lineCap = 'round';
+    for (const p of P) {
+      p.z -= speed * dt;
+      if (p.z <= 0.03) { spawn(p); continue; }
+      const sx = cx + p.x / p.z * f, sy = cy + p.y / p.z * f;
+      if (sx < -50 || sx > dust.width + 50 || sy < -50 || sy > dust.height + 50) { spawn(p); continue; }
+      const near = 1 - p.z, a = strength * near * near * 0.9;
+      if (p.px !== null && a > 0.01) {
+        let ox = p.px, oy = p.py;
+        if (warp > 0) { ox = lerp(ox, cx + (ox - cx) * 0.55, warp); oy = lerp(oy, cy + (oy - cy) * 0.55, warp); }
+        dctx.strokeStyle = 'rgba(' + (warp > .2 ? '190,250,255' : '225,238,248') + ',' + a.toFixed(3) + ')';
+        dctx.lineWidth = (0.6 + near * 1.6 + warp * 1.2) * dpr;
+        dctx.beginPath(); dctx.moveTo(ox, oy); dctx.lineTo(sx + 0.01, sy + 0.01); dctx.stroke();
+      }
+      p.px = sx; p.py = sy;
+    }
+  }
+
+  /* ---- scroll state ---- */
+  const track = $('track');
+  let p = 0, pSmooth = 0, vel = 0;
+  const readP = () => clamp(scrollY / Math.max(1, track.offsetHeight - innerHeight));
+  addEventListener('scroll', () => { p = readP(); }, { passive: true });
+  p = pSmooth = readP();
+  const toP = t => scrollTo({ top: t * (track.offsetHeight - innerHeight), behavior: reduce ? 'auto' : 'smooth' });
+  $('go').addEventListener('click', () => toP(0.3));
+  $('book').addEventListener('click', () => toP(1));
+
+  const el = { helmet: $('helmet'), hud: $('hud'), fog: $('fog'), visor: $('visor'), intro: $('intro'), end: $('end'), flash: $('flash'), arrival: $('arrival') };
+  const boot = [...document.querySelectorAll('#boot span')];
+  const on = (id, v) => $(id).classList.toggle('on', v);
+  const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/ | /g, ' ');
+  let lastFrameKey = '';
+
+  /* Timeline (share of total scroll):
+     0–.08 hero · .07–.21 helmet goes on · .20–.33 boot + fog clears · .27–.56 approach (clip A)
+     .56–.86 over the planet (clip B) · .74–.90 target lock · .90–.97 jump · .965–1 arrival */
+  function frame(now) {
+    const raw = (now - (frame.t || now)) / 1000, dt = Math.min(0.05, raw); frame.t = now;
+    const prev = pSmooth;
+    pSmooth += (p - pSmooth) * (reduce ? 1 : 1 - Math.exp(-raw * 8));
+    if (Math.abs(p - pSmooth) < 0.00005) pSmooth = p;
+    vel = lerp(vel, Math.abs(pSmooth - prev) / Math.max(raw, 0.001), 0.2);
+    const q = pSmooth, t = now / 1000;
+
+    /* film */
+    const fa = seg(q, 0.27, 0.56), fb = seg(q, 0.56, 0.86);
+    const fi = fb > 0 ? NA + fb * (NB - 1) : fa * (NA - 1);
+    const idx = Math.round(fi), key = idx + '|' + loaded + '|' + film.width;
+    if (key !== lastFrameKey || dirty) {
+      const im = nearest(idx);
+      if (im) {
+        fctx.globalAlpha = 1; fctx.fillStyle = '#04060a'; fctx.fillRect(0, 0, film.width, film.height);
+        cover(im, 1);
+        const tail = idx - (NA - 1 - BLEND);            /* soften the cut between the two clips */
+        if (idx < NA && tail > 0 && imgs[NA]) cover(imgs[NA], tail / BLEND);
+        fctx.globalAlpha = 1;
+      }
+      lastFrameKey = key; dirty = false;
+    }
+
+    const helm = ease(seg(q, 0.07, 0.21));
+    const jump = seg(q, 0.90, 0.97), arrive = seg(q, 0.965, 0.995);
+    const sway = reduce ? 0 : 1;
+    const zoomIdle = 1.02 + (1 - seg(q, 0, 0.27)) * 0.035 * (0.5 + 0.5 * Math.sin(t * 0.25)) + seg(q, 0, 0.27) * 0.03;
+    const zoom = zoomIdle + jump * jump * 0.9;
+    const dx = Math.sin(t * 0.41) * 7 * sway, dy = Math.cos(t * 0.33) * 5 * sway, rot = Math.sin(t * 0.21) * 0.18 * sway;
+    film.style.transform = 'translate(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px) rotate(' + rot.toFixed(3) + 'deg) scale(' + zoom.toFixed(4) + ')';
+    film.style.filter = jump > 0 ? 'brightness(' + (1 + jump * 1.6).toFixed(2) + ') blur(' + (jump * jump * 6).toFixed(1) + 'px)' : 'none';
+    film.style.opacity = 1 - arrive;
+
+    /* dust */
+    const cruise = 0.05 + seg(q, 0.21, 0.3) * 0.16;
+    const speed = cruise + Math.min(vel * 9, 1.6) + jump * jump * 5;
+    const strength = clamp(0.12 + helm * 0.55 + Math.min(vel * 3, 0.35)) * (1 - arrive * 0.7);
+    drawDust(dt, speed, strength, ease(jump) * (1 - arrive));
+
+    /* helmet */
+    el.helmet.style.opacity = clamp(helm * 2.2);
+    el.helmet.style.transform = 'translate(' + (-dx * 0.25).toFixed(2) + 'px,' + ((1 - helm) * -34 - dy * 0.25).toFixed(2) + 'vh) scale(' + (1 + (1 - helm) * 1.5).toFixed(4) + ')';
+    el.visor.style.setProperty('--glare', (Math.sin(t * 0.3) * 30 + q * 400).toFixed(1) + 'px');
+    const fog = seg(q, 0.15, 0.215) * (1 - ease(seg(q, 0.225, 0.34)));
+    const breath = 0.5 + 0.5 * Math.sin(t * 1.25);
+    el.fog.style.opacity = clamp(fog * (0.82 + 0.18 * breath) + seg(q, 0.34, 0.9) * 0.035 * breath * (1 - jump));
+
+    /* HUD */
+    el.hud.style.opacity = helm >= 1 ? 1 : 0;
+    el.hud.style.transform = 'translate(' + (-dx * 0.4).toFixed(2) + 'px,' + (-dy * 0.4).toFixed(2) + 'px)';
+    const b = seg(q, 0.20, 0.285);
+    const bootOn = q > 0.2 && q < 0.31;
+    on('boot', bootOn);
+    boot.forEach((s, i) => s.classList.toggle('on', b > (i + 0.4) / boot.length));
+    const live = q > 0.3;
+    on('h-tl', live); on('h-tr', live); on('h-bl', live && q < 0.955); on('h-br', live);
+    on('say', q > 0.33 && q < 0.45);
+    on('reticle', q > 0.74 && q < 0.93); on('lock', q > 0.78 && q < 0.93);
+    on('course', q > 0.6 && q < 0.965);
+    if (live) {
+      const leave = seg(q, 0.56, 0.9);
+      $('dist-l').textContent = leave > 0 ? 'от Земли' : 'до Земли';
+      $('dist').textContent = fmt(leave > 0 ? lerp(2100, 41800, leave * leave) : lerp(384400, 2100, 1 - Math.pow(1 - fa, 2.2)));
+      $('spd').textContent = (lerp(7.8, 11.2, clamp(fa + fb * 0.4)) + jump * 2990).toFixed(1).replace('.', ',');
+      $('o2').textContent = String(Math.round(100 - seg(q, 0.3, 1) * 3));
+      const sLeft = Math.ceil(12 * (1 - seg(q, 0.6, 0.9)));
+      $('cd').textContent = '00:' + String(sLeft).padStart(2, '0');
+    }
+
+    /* page UI */
+    const out = seg(q, 0.015, 0.075);
+    el.intro.style.opacity = 1 - out;
+    el.intro.style.transform = 'translateY(' + (-out * 40).toFixed(1) + 'px)';
+    el.intro.style.pointerEvents = out > 0.6 ? 'none' : 'auto';
+    el.intro.style.visibility = out >= 1 ? 'hidden' : 'visible';
+    el.flash.style.opacity = clamp(seg(q, 0.945, 0.968) - seg(q, 0.972, 0.995));
+    el.arrival.style.opacity = arrive;
+    el.end.style.opacity = seg(q, 0.978, 0.998);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

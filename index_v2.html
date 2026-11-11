@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORBIT · прототип: Земля → «Глубина»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Prototype v2. Helmet and HUD below are still temporary placeholders (final helmet frame comes at the end of the project).
+   Layout: fixed full-screen stage, a tall scroll track drives a scene timeline measured in "units" (1 unit ≈ one screen of scroll). */
+:root{
+  color-scheme: dark;
+  --void:#04060a; --rim:#06080c;
+  --ink:#eef4f8; --ink-dim:rgba(238,244,248,.62);
+  --hud:#8fe9ff; --hud-dim:rgba(143,233,255,.55);
+  --target:#3df0d8; --warn:#ffb057;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--mono)}
+body{overflow-x:hidden}
+#stage{position:fixed;inset:0;overflow:hidden;background:var(--void)}
+#film,#fx{position:absolute;inset:0;width:100%;height:100%;display:block}
+#film{will-change:transform,filter}
+.veil{position:absolute;inset:0;opacity:0;pointer-events:none}
+#flash{background:#eaffff}
+#murk{background:radial-gradient(120% 100% at 50% 40%,#0b3a44 0%,#06202a 55%,#03090d 100%)}
+#splash{background:radial-gradient(70% 60% at 50% 55%,rgba(230,255,255,.95) 0%,rgba(120,240,230,.55) 35%,rgba(10,60,70,.0) 75%)}
+
+/* ---------- helmet (placeholder) ---------- */
+#helmet{position:absolute;inset:0;pointer-events:none;opacity:0;transform-origin:50% 46%;will-change:transform,opacity}
+#visor{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;border-radius:33% 33% 30% 30% / 42% 42% 38% 38%;
+  box-shadow:0 0 0 200vmax var(--rim), inset 0 0 0 2px rgba(170,215,240,.22), inset 0 0 9vmax 3vmax rgba(0,0,0,.82), inset 0 1.2vmax 2vmax rgba(150,200,230,.10);
+  overflow:hidden}
+#visor::before{content:"";position:absolute;inset:-10%;
+  background:linear-gradient(112deg,transparent 30%,rgba(190,230,255,.07) 38%,transparent 44%,transparent 58%,rgba(190,230,255,.04) 63%,transparent 68%);
+  transform:translateX(var(--glare,0px))}
+#fog{position:absolute;inset:0;opacity:0;
+  background:radial-gradient(90% 80% at 50% 62%,rgba(205,228,240,.50),rgba(205,228,240,.16) 60%,transparent 85%);
+  -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+#chin{position:absolute;left:50%;bottom:2.2vh;transform:translateX(-50%);display:flex;gap:10px;align-items:center;
+  font-size:10px;letter-spacing:.22em;color:rgba(143,233,255,.38)}
+#chin i{width:6px;height:6px;border-radius:50%;background:var(--target);box-shadow:0 0 8px var(--target)}
+
+/* ---------- HUD (placeholder) ---------- */
+#hud{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;pointer-events:none;color:var(--hud);
+  font-size:clamp(10px,1.05vw,14px);letter-spacing:.14em;text-transform:uppercase;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px rgba(143,233,255,.45),0 1px 3px rgba(0,0,0,.9);opacity:0}
+.h{position:absolute;opacity:0;transition:opacity .25s linear}
+.h.on{opacity:1}
+#h-tl{left:13%;top:15%} #h-tr{right:13%;top:15%;text-align:right}
+#h-bl{left:15%;bottom:15%} #h-br{right:15%;bottom:15%;text-align:right}
+.h small{display:block;color:var(--hud-dim);font-size:.82em;margin-bottom:.35em}
+.h b{font-weight:500;font-size:1.25em;color:var(--ink)}
+#boot{left:14%;top:50%;transform:translateY(-50%);white-space:pre;line-height:1.9;text-align:left}
+#boot span{display:block;opacity:0;transition:opacity .2s}
+#boot span.on{opacity:1}
+#boot em{font-style:normal;color:var(--target)}
+#say{left:50%;top:50%;transform:translate(-50%,-50%);width:min(80%,900px);text-align:center;
+  font-family:var(--display);font-weight:400;font-size:clamp(20px,3.2vw,46px);letter-spacing:0;line-height:1.2;text-transform:none;color:var(--ink);text-wrap:balance;text-shadow:0 2px 24px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)}
+#reticle{left:50%;top:50%;width:clamp(90px,11vw,150px);aspect-ratio:1;transform:translate(-50%,-50%)}
+#reticle::before,#reticle::after{content:"";position:absolute;inset:0;border:1px solid var(--target);border-radius:50%;opacity:.8}
+#reticle::after{inset:-14%;border-style:dashed;opacity:.35;animation:spin 14s linear infinite}
+#lock{left:50%;top:calc(50% + clamp(70px,8.5vw,115px));transform:translateX(-50%);text-align:center;color:var(--target);white-space:nowrap}
+#lock b{color:var(--ink)}
+#course{left:50%;bottom:7%;transform:translateX(-50%);text-align:center;white-space:nowrap}
+#course b{color:var(--warn)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- page UI: intro ---------- */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;will-change:opacity,transform}
+header{display:flex;align-items:center;gap:28px;padding:22px clamp(16px,4vw,48px);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.logo{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.3em;margin-right:auto}
+header nav{display:flex;gap:28px;color:var(--ink-dim)}
+.btn{font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid rgba(238,244,248,.45);
+  border-radius:999px;padding:12px 22px;cursor:pointer;transition:background .2s,color .2s}
+.btn:hover{background:var(--ink);color:var(--void)}
+.btn:focus-visible{outline:2px solid var(--hud);outline-offset:3px}
+.btn.solid{background:var(--ink);color:var(--void);border-color:var(--ink)}
+.btn.solid:hover{background:transparent;color:var(--ink)}
+.hero{margin-top:auto;padding:0 clamp(16px,4vw,48px) clamp(64px,11vh,120px);max-width:980px}
+.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--hud);margin:0 0 18px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);line-height:1.02;margin:0 0 22px;text-wrap:balance;letter-spacing:-.01em}
+.sub{font-size:clamp(13px,1.15vw,16px);line-height:1.65;color:var(--ink-dim);max-width:52ch;margin:0 0 28px;letter-spacing:.02em}
+.cta{display:flex;flex-wrap:wrap;align-items:center;gap:18px}
+.hint{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
+.hint::after{content:" ↓";display:inline-block;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+.stats{position:absolute;right:clamp(16px,4vw,48px);bottom:clamp(64px,11vh,120px);display:flex;flex-direction:column;gap:14px;text-align:right;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+.stats b{display:block;font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:0;color:var(--ink)}
+
+/* ---------- tour card + end card ---------- */
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:16px;opacity:0;pointer-events:none}
+.panel .eyebrow{color:var(--target);margin:0}
+.panel h2{font-family:var(--display);font-weight:600;font-size:clamp(30px,5.4vw,80px);margin:0;line-height:1.05;text-shadow:0 2px 30px rgba(0,0,0,.7)}
+.panel p{margin:0;max-width:46ch;font-size:13px;line-height:1.65;color:var(--ink-dim)}
+#card{justify-content:flex-start;padding-top:20vh}
+#card .facts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:4px}
+#card .facts span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;border:1px solid rgba(143,233,255,.35);border-radius:999px;padding:8px 14px;color:var(--ink);background:rgba(4,20,26,.45)}
+#card .facts span.price{border-color:var(--warn);color:var(--warn)}
+#card .btn{margin-top:10px}
+#end .tag{margin-top:10px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--warn);border:1px solid rgba(255,176,87,.5);padding:7px 12px;border-radius:999px}
+
+#loader{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:10px;letter-spacing:.24em;color:var(--ink-dim);text-transform:uppercase;transition:opacity .6s;white-space:nowrap}
+@media (max-width:760px){
+  header nav{display:none} .stats{display:none}
+  #h-tl,#h-bl{left:9%} #h-tr,#h-br{right:9%}
+  #visor,#hud{left:2vw;right:2vw;top:3vh;bottom:8vh}
+  #card{padding-top:14vh}
+}
+@media (prefers-reduced-motion:reduce){ .hint::after,#reticle::after{animation:none} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="film" aria-label="Полёт с Земли на океаническую планету KEPLER-22b" role="img"></canvas>
+  <div class="veil" id="murk"></div>
+  <div class="veil" id="splash"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="veil" id="flash"></div>
+
+  <div id="helmet" aria-hidden="true">
+    <div id="visor"><div id="fog"></div></div>
+    <div id="chin"><i></i>ORBIT · MK-IV · ГЕРМЕТИЧНО</div>
+  </div>
+
+  <div id="hud" aria-hidden="true">
+    <div class="h" id="h-tl"><small>ORBIT · пассажир 001</small>O₂ <b id="o2">100</b>%</div>
+    <div class="h" id="h-tr"><small>связь</small><b id="link">стабильна</b></div>
+    <div class="h" id="h-bl"><small id="dist-l">до Земли</small><b id="dist">384 400</b> <span id="dist-u">км</span></div>
+    <div class="h" id="h-br"><small id="spd-l">скорость</small><b id="spd">0,0</b> <span id="spd-u">км/с</span></div>
+    <div class="h" id="boot"><span>ШЛЕМ АКТИВИРОВАН</span><span>O₂ ......... <em>100%</em></span><span>СВЯЗЬ ...... <em>СТАБИЛЬНА</em></span><span>ПАССАЖИР ... <em>ГОТОВ</em></span></div>
+    <div class="h" id="say">Дышите спокойно. Мы взлетаем.</div>
+    <div class="h" id="reticle"></div>
+    <div class="h" id="lock">цель захвачена · <b>KEPLER-22b</b></div>
+    <div class="h" id="course">курс: KEPLER-22b · до прыжка <b id="cd">00:12</b></div>
+  </div>
+
+  <div id="intro">
+    <header>
+      <span class="logo">ORBIT</span>
+      <nav><span>Туры</span><span>Как проходит полёт</span><span>Безопасность</span></nav>
+      <button class="btn" id="book" type="button">Забронировать</button>
+    </header>
+    <div class="hero">
+      <p class="eyebrow">Космическое турагентство · сезон 2077 открыт</p>
+      <h1>Земля — только начало</h1>
+      <p class="sub">Четыре планеты, четыре непохожих мира. Туры от 3 до 10 дней: без визы, но с невесомостью.</p>
+      <div class="cta">
+        <button class="btn solid" id="go" type="button">Выбрать планету</button>
+        <span class="hint">Листайте, чтобы надеть шлем</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div><b>4</b>планеты</div>
+      <div><b>12 000</b>световых лет за неделю</div>
+      <div><b>0</b>пассажиров захотели домой раньше</div>
+    </div>
+  </div>
+
+  <div class="panel" id="card">
+    <p class="eyebrow">Тур 01 · KEPLER-22b · релакс и wellness</p>
+    <h2>Глубина</h2>
+    <p>Светящийся океан без берегов: гигантские медузы, кит размером с небоскрёб и отели на дне.</p>
+    <div class="facts"><span>7 дней</span><span>подводные отели</span><span class="price">от 2,4 млн ₽</span></div>
+    <button class="btn solid" id="card-book" type="button">Забронировать тур</button>
+  </div>
+
+  <div class="panel" id="end">
+    <p class="eyebrow">Следующая остановка</p>
+    <h2>Тур 02. Два солнца</h2>
+    <p>Пустыня под закатом двух солнц: дюны, сафари с кочевниками и древние руины.</p>
+    <span class="tag">сцена в производстве</span>
+  </div>
+
+  <div id="loader">загрузка маршрута 0%</div>
+</div>
+<div id="track"></div>
+
+<script>
+(() => {
+  /* ===== clips (frames on disk) ===== */
+  const pad = n => String(n).padStart(3, '0');
+  const STEP = new URLSearchParams(location.search).get('step') === '2' ? 2 : 1;   /* ?step=2 → every second frame, half the weight */
+  const CLIPS = {
+    ea: { n: 97, url: i => 'frames/a_' + pad(i) + '.webp' },          /* Earth: approach */
+    eb: { n: 97, url: i => 'frames/b_' + pad(i) + '.webp' },          /* Earth: over the planet */
+    k1: { n: 73, url: i => 'frames/depth/k1_' + pad(i + 1) + '.webp' }, /* Kepler: approach */
+    k2: { n: 73, url: i => 'frames/depth/k2_' + pad(i + 1) + '.webp' }, /* entry, turn along the ocean */
+    k3: { n: 73, url: i => 'frames/depth/k3_' + pad(i + 1) + '.webp' }, /* glide + dive */
+    k4: { n: 73, url: i => 'frames/depth/k4_' + pad(i + 1) + '.webp' }, /* down to the jellyfish */
+    k5: { n: 73, url: i => 'frames/depth/k5_' + pad(i + 1) + '.webp' }, /* whale */
+    k6: { n: 73, url: i => 'frames/depth/k6_' + pad(i + 1) + '.webp' }, /* hotels */
+    k7: { n: 73, url: i => 'frames/depth/k7_' + pad(i + 1) + '.webp' }  /* rise + surfacing */
+  };
+
+  /* ===== timeline, in units (1 unit ≈ 1 screen of scroll) =====
+     0–1 hero · 1–2.2 helmet on + boot · 2.2–8.6 Earth (jump 8.0–8.6) · 8.6–21.5 Kepler clips
+     21.5–22.8 hold on hotels + tour card · 22.2–23.2 bubble junction · 22.8–25 rise · 25–26 end */
+  const SEGS = [
+    { c: 'ea', u0: 2.2,  u1: 5.2 },
+    { c: 'eb', u0: 5.2,  u1: 8.6 },
+    { c: 'k1', u0: 8.6,  u1: 10.8 },
+    { c: 'k2', u0: 10.8, u1: 13.0 },
+    { c: 'k3', u0: 13.0, u1: 15.5 },
+    { c: 'k4', u0: 15.5, u1: 17.5 },
+    { c: 'k5', u0: 17.5, u1: 19.5 },
+    { c: 'k6', u0: 19.5, u1: 21.5 },
+    { c: 'k7', u0: 22.8, u1: 25.0 }
+  ];
+  const TOTAL = 26;
+  const U = {                       /* key moments */
+    jump0: 8.0, cut: 8.6,
+    dive: 13.0 + (47 / 72) * 2.5,   /* k3 frames 45–50: Kling's dive glitch, covered by the splash */
+    swap: 22.8,                     /* hotels → rising, covered by bubbles */
+    surf: 22.8 + (22 / 72) * 2.2    /* k7 frame ~22: breaking the surface */
+  };
+
+  const $ = id => document.getElementById(id);
+  const track = $('track');
+  track.style.height = (TOTAL * 100) + 'vh';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const film = $('film'), fctx = film.getContext('2d');
+  const fx = $('fx'), xctx = fx.getContext('2d');
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const seg = (p, a, b) => clamp((p - a) / (b - a));
+  const bell = (p, a, m, b) => p < m ? seg(p, a, m) : 1 - seg(p, m, b);
+  const ease = t => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  /* ===== frame loading: nearest-to-viewer first, ahead weighted over behind ===== */
+  for (const k in CLIPS) CLIPS[k].img = new Array(CLIPS[k].n).fill(null);
+  const jobs = [];
+  for (const s of SEGS) {
+    const cl = CLIPS[s.c];
+    for (let i = 0; i < cl.n; i += STEP) jobs.push({ c: s.c, i, u: lerp(s.u0, s.u1, i / (cl.n - 1)), state: 0 });
+    if ((cl.n - 1) % STEP) jobs.push({ c: s.c, i: cl.n - 1, u: s.u1, state: 0 });   /* always keep the last frame */
+  }
+  const totalJobs = jobs.length;
+  let loaded = 0, inflight = 0, curU = 0, dirty = true;
+  function pick() {
+    let best = null, bd = 1e9;
+    for (const j of jobs) {
+      if (j.state) continue;
+      const d = j.u >= curU ? j.u - curU : (curU - j.u) * 2.5;
+      if (d < bd) { bd = d; best = j; }
+    }
+    return best;
+  }
+  function pump() {
+    while (inflight < 6) {
+      const j = pick(); if (!j) return;
+      j.state = 1; inflight++;
+      const im = new Image(); im.decoding = 'async';
+      im.onload = () => { CLIPS[j.c].img[j.i] = im; fin(); };
+      im.onerror = fin;
+      im.src = CLIPS[j.c].url(j.i);
+      function fin() {
+        inflight--; loaded++; dirty = true;
+        $('loader').textContent = 'загрузка маршрута ' + Math.round(loaded / totalJobs * 100) + '%' + (STEP === 2 ? ' · каждый 2-й кадр' : '');
+        if (loaded >= totalJobs) $('loader').style.opacity = 0;
+        pump();
+      }
+    }
+  }
+  pump();
+  function nearestImg(c, i) {
+    const a = CLIPS[c].img;
+    for (let d = 0; d < a.length; d++) {
+      if (a[i - d]) return a[i - d];
+      if (a[i + d]) return a[i + d];
+    }
+    return null;
+  }
+
+  /* where is the film at unit u? */
+  function filmAt(u) {
+    if (u <= SEGS[0].u0) return { c: 'ea', f: 0 };
+    for (let k = 0; k < SEGS.length; k++) {
+      const s = SEGS[k], n = CLIPS[s.c].n;
+      if (u < s.u1) return u >= s.u0 ? { c: s.c, f: seg(u, s.u0, s.u1) * (n - 1) } : { c: SEGS[k - 1].c, f: CLIPS[SEGS[k - 1].c].n - 1 };
+    }
+    return { c: 'k7', f: CLIPS.k7.n - 1 };
+  }
+
+  /* ===== sizing ===== */
+  let dpr = 1;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (const c of [film, fx]) { c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
+    dirty = true;
+  }
+  addEventListener('resize', resize); resize();
+  function cover(im, alpha) {
+    const s = Math.max(film.width / im.naturalWidth, film.height / im.naturalHeight);
+    const w = im.naturalWidth * s, h = im.naturalHeight * s;
+    fctx.globalAlpha = alpha;
+    fctx.drawImage(im, (film.width - w) / 2, (film.height - h) / 2, w, h);
+  }
+
+  /* ===== fx canvas: space dust, bubbles, water on the visor ===== */
+  const DUST = Array.from({ length: 170 }, () => spawnDust({}, true));
+  function spawnDust(p, any) { p.x = (Math.random() * 2 - 1) * 1.2; p.y = (Math.random() * 2 - 1) * 1.2; p.z = any ? Math.random() * 0.95 + 0.05 : 1; p.px = null; return p; }
+  const BUB = Array.from({ length: 140 }, () => spawnBub({}, true));
+  function spawnBub(b, any) { b.x = Math.random(); b.y = any ? Math.random() * 1.2 : 1.05 + Math.random() * 0.3; b.r = 2 + Math.random() * 16 * Math.random(); b.v = 0.25 + Math.random() * 0.9; b.w = Math.random() * 6.28; return b; }
+  const DROPS = [];
+  let lastSurf = false;
+
+  function drawFx(dt, t, dust, warp, bubbles, wet) {
+    const W = fx.width, H = fx.height;
+    xctx.clearRect(0, 0, W, H);
+    /* space dust flying at the viewer */
+    if (dust.a > 0.002) {
+      const cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.42;
+      xctx.lineCap = 'round';
+      for (const p of DUST) {
+        p.z -= dust.speed * dt;
+        if (p.z <= 0.03) { spawnDust(p); continue; }
+        const sx = cx + p.x / p.z * f, sy = cy + p.y / p.z * f;
+        if (sx < -50 || sx > W + 50 || sy < -50 || sy > H + 50) { spawnDust(p); continue; }
+        const near = 1 - p.z, a = dust.a * near * near * 0.9;
+        if (p.px !== null && a > 0.01) {
+          let ox = p.px, oy = p.py;
+          if (warp > 0) { ox = lerp(ox, cx + (ox - cx) * 0.55, warp); oy = lerp(oy, cy + (oy - cy) * 0.55, warp); }
+          xctx.strokeStyle = 'rgba(' + (warp > .2 ? '190,250,255' : '225,238,248') + ',' + a.toFixed(3) + ')';
+          xctx.lineWidth = (0.6 + near * 1.6 + warp * 1.2) * dpr;
+          xctx.beginPath(); xctx.moveTo(ox, oy); xctx.lineTo(sx + 0.01, sy + 0.01); xctx.stroke();
+        }
+        p.px = sx; p.py = sy;
+      }
+    }
+    /* bubbles rising past the visor */
+    if (bubbles > 0.01) {
+      for (const b of BUB) {
+        b.y -= b.v * dt * (0.6 + bubbles); b.w += dt * 3;
+        if (b.y < -0.1) spawnBub(b);
+        const x = (b.x + Math.sin(b.w) * 0.006) * W, y = b.y * H, r = b.r * dpr * (0.6 + bubbles * 0.8);
+        xctx.beginPath(); xctx.arc(x, y, r, 0, 6.283);
+        xctx.strokeStyle = 'rgba(210,250,255,' + (0.55 * bubbles).toFixed(3) + ')'; xctx.lineWidth = 1.2 * dpr; xctx.stroke();
+        xctx.fillStyle = 'rgba(160,240,235,' + (0.10 * bubbles).toFixed(3) + ')'; xctx.fill();
+        xctx.beginPath(); xctx.arc(x - r * .35, y - r * .35, r * .22, 0, 6.283);
+        xctx.fillStyle = 'rgba(255,255,255,' + (0.6 * bubbles).toFixed(3) + ')'; xctx.fill();
+      }
+    }
+    /* water running down the visor after surfacing (spawn on the way up, keep sliding) */
+    if (wet > 0.05 && DROPS.length < 90 && Math.random() < wet * 0.9) {
+      DROPS.push({ x: Math.random(), y: -0.05 + Math.random() * 0.5, v: 0.05 + Math.random() * 0.25, r: 2 + Math.random() * 5, a: 0.5 + Math.random() * 0.5, tail: [] });
+    }
+    for (let k = DROPS.length - 1; k >= 0; k--) {
+      const d = DROPS[k];
+      d.v += dt * 0.12 * Math.random(); d.y += d.v * dt; d.x += (Math.random() - .5) * 0.0008;
+      d.a -= dt * 0.18;
+      if (d.y > 1.1 || d.a <= 0) { DROPS.splice(k, 1); continue; }
+      const x = d.x * W, y = d.y * H, r = d.r * dpr, a = clamp(d.a) * clamp(wet + 0.35);
+      const g = xctx.createLinearGradient(x, y - r * 14, x, y);
+      g.addColorStop(0, 'rgba(200,245,255,0)'); g.addColorStop(1, 'rgba(200,245,255,' + (a * .35).toFixed(3) + ')');
+      xctx.fillStyle = g; xctx.fillRect(x - r * .45, y - r * 14, r * .9, r * 14);
+      xctx.beginPath(); xctx.arc(x, y, r, 0, 6.283);
+      xctx.fillStyle = 'rgba(190,240,250,' + (a * .25).toFixed(3) + ')'; xctx.fill();
+      xctx.strokeStyle = 'rgba(235,255,255,' + (a * .6).toFixed(3) + ')'; xctx.lineWidth = dpr; xctx.stroke();
+    }
+  }
+
+  /* ===== scroll ===== */
+  let p = 0, pS = 0, vel = 0;
+  const maxScroll = () => Math.max(1, track.offsetHeight - innerHeight);
+  const readP = () => clamp(scrollY / maxScroll());
+  addEventListener('scroll', () => { p = readP(); }, { passive: true });
+  p = pS = readP();
+  const toU = u => scrollTo({ top: (u / TOTAL) * maxScroll(), behavior: reduce ? 'auto' : 'smooth' });
+  $('go').addEventListener('click', () => toU(2.4));
+  $('book').addEventListener('click', () => toU(22.0));
+  $('card-book').addEventListener('click', () => toU(25.6));
+
+  const el = { helmet: $('helmet'), hud: $('hud'), fog: $('fog'), visor: $('visor'), intro: $('intro'), card: $('card'), end: $('end'),
+    flash: $('flash'), murk: $('murk'), splash: $('splash') };
+  const bootLines = [...document.querySelectorAll('#boot span')];
+  const on = (id, v) => $(id).classList.toggle('on', v);
+  const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/\s/g, ' ');
+  let lastKey = '';
+
+  function frame(now) {
+    const raw = (now - (frame.t || now)) / 1000, dt = Math.min(0.05, raw); frame.t = now;
+    const prev = pS;
+    pS += (p - pS) * (reduce ? 1 : 1 - Math.exp(-raw * 8));
+    if (Math.abs(p - pS) < 0.00002) pS = p;
+    vel = lerp(vel, Math.abs(pS - prev) * TOTAL / Math.max(raw, 0.001), 0.2);   /* units per second */
+    const u = pS * TOTAL, t = now / 1000;
+    if (Math.abs(u - curU) > 0.3) { curU = u; pump(); } else curU = u;
+
+    /* ---- film ---- */
+    const fa = filmAt(u), idx = Math.round(fa.f), key = fa.c + idx + '|' + loaded + '|' + film.width;
+    if (key !== lastKey || dirty) {
+      const im = nearestImg(fa.c, idx);
+      if (im) {
+        fctx.globalAlpha = 1; fctx.fillStyle = '#04060a'; fctx.fillRect(0, 0, film.width, film.height);
+        cover(im, 1);
+        if (fa.c === 'ea' && idx > 96 - 8 && CLIPS.eb.img[0]) cover(CLIPS.eb.img[0], (idx - 88) / 8);   /* soften the cut between the two Earth clips */
+        fctx.globalAlpha = 1;
+      }
+      lastKey = key; dirty = false;
+    }
+
+    const water = u > U.dive - 0.05 && u < U.surf;          /* camera under water */
+    const space = u < 11.6;                                  /* until the turn along the ocean */
+    const helm = ease(seg(u, 1.0, 2.2));
+    const jump = seg(u, U.jump0, U.cut) * (u < U.cut ? 1 : 0);
+    const sway = reduce ? 0 : 1;
+    const zoom = 1.02 + (1 - seg(u, 0, 2.2)) * 0.035 * (0.5 + 0.5 * Math.sin(t * 0.25)) + seg(u, 0, 2.2) * 0.03 + jump * jump * 0.9;
+    const swim = water ? 1.6 : 1;
+    const dx = Math.sin(t * 0.41) * 7 * sway * swim, dy = Math.cos(t * 0.33) * 5 * sway * swim, rot = Math.sin(t * 0.21) * 0.18 * sway;
+    film.style.transform = 'translate(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px) rotate(' + rot.toFixed(3) + 'deg) scale(' + zoom.toFixed(4) + ')';
+    const diveFx = bell(u, U.dive - 0.22, U.dive, U.dive + 0.3);
+    const blur = jump * jump * 6 + diveFx * 7;
+    film.style.filter = (jump > 0 || diveFx > 0) ? 'brightness(' + (1 + jump * 1.6 + diveFx * .5).toFixed(2) + ') blur(' + blur.toFixed(1) + 'px)' : 'none';
+
+    /* ---- veils: jump flash, dive splash, bubble murk ---- */
+    el.flash.style.opacity = clamp(seg(u, U.cut - 0.25, U.cut) - seg(u, U.cut + 0.05, U.cut + 0.5)) + bell(u, U.surf - 0.12, U.surf, U.surf + 0.25) * 0.35;
+    el.splash.style.opacity = diveFx * 0.85;
+    const murk = bell(u, U.swap - 0.55, U.swap, U.swap + 0.35);
+    el.murk.style.opacity = murk * 0.92;
+
+    /* ---- fx ---- */
+    const cruise = 0.05 + seg(u, 2.0, 3.0) * 0.16;
+    const dust = { a: space ? clamp(0.12 + helm * 0.55 + Math.min(vel * 0.12, 0.35)) * (1 - seg(u, 10.6, 11.4)) : 0,
+                   speed: cruise + Math.min(vel * 0.35, 1.6) + jump * jump * 5 };
+    const bubbles = Math.max(diveFx, bell(u, U.swap - 0.6, U.swap, U.swap + 0.55), water ? 0.06 : 0);
+    const wet = u > U.surf ? (1 - seg(u, U.surf, U.surf + 1.4)) : 0;
+    drawFx(dt, t, dust, ease(jump), bubbles, wet);
+
+    /* ---- helmet ---- */
+    el.helmet.style.opacity = clamp(helm * 2.2);
+    el.helmet.style.transform = 'translate(' + (-dx * 0.25).toFixed(2) + 'px,' + ((1 - helm) * -34 - dy * 0.25).toFixed(2) + 'vh) scale(' + (1 + (1 - helm) * 1.5).toFixed(4) + ')';
+    el.visor.style.setProperty('--glare', (Math.sin(t * 0.3) * 30 + u * 15).toFixed(1) + 'px');
+    const breath = 0.5 + 0.5 * Math.sin(t * 1.25);
+    const fogBoot = seg(u, 1.6, 2.2) * (1 - ease(seg(u, 2.3, 3.2)));
+    el.fog.style.opacity = clamp(fogBoot * (0.82 + 0.18 * breath) + (u > 3.2 ? 0.035 * breath * (1 - jump) : 0));
+
+    /* ---- HUD ---- */
+    el.hud.style.opacity = helm >= 1 ? 1 : 0;
+    el.hud.style.transform = 'translate(' + (-dx * 0.4).toFixed(2) + 'px,' + (-dy * 0.4).toFixed(2) + 'px)';
+    const bootP = seg(u, 2.0, 2.8);
+    on('boot', u > 2.0 && u < 3.0);
+    bootLines.forEach((s, i) => s.classList.toggle('on', bootP > (i + 0.4) / bootLines.length));
+    const live = u > 2.9, cardOn = u > 21.2 && u < 22.9, endOn = u > 25.2;
+    on('h-tl', live && !cardOn && !endOn); on('h-tr', live && !cardOn && !endOn);
+    on('h-bl', live && !cardOn && !endOn && Math.abs(u - U.cut) > 0.3); on('h-br', live && !cardOn && !endOn);
+    const sayText = u < 5 ? 'Дышите спокойно. Мы взлетаем.' : 'KEPLER-22b. Океан без берегов.';
+    if ($('say').textContent !== sayText) $('say').textContent = sayText;
+    on('say', (u > 3.1 && u < 4.4) || (u > 9.0 && u < 10.2));
+    on('reticle', u > 7.2 && u < 8.4); on('lock', u > 7.4 && u < 8.4);
+    on('course', u > 6.0 && u < 8.55);
+
+    if (live) {
+      let dl, dv, du, sl = 'скорость', sv, su = 'км/с';
+      if (u < 5.2) {                                   /* to the Moon-distance orbit of Earth, as in v1 */
+        const fa1 = seg(u, 2.2, 5.2);
+        dl = 'до Земли'; du = 'км'; dv = fmt(lerp(384400, 2100, 1 - Math.pow(1 - fa1, 2.2)));
+        sv = lerp(7.8, 10.2, fa1).toFixed(1);
+      } else if (u < U.cut) {
+        const lv = seg(u, 5.2, 8.6);
+        dl = 'от Земли'; du = 'км'; dv = fmt(lerp(2100, 41800, lv * lv)); sv = (lerp(10.2, 11.2, lv) + jump * 2990).toFixed(1);
+      } else if (u < 13.0) {                            /* Kepler: altitude */
+        const a = seg(u, U.cut, 13.0);
+        dl = 'высота'; du = 'км'; dv = fmt(Math.max(0.4, 52000 * Math.pow(1 - a, 3)));
+        sv = lerp(9.4, 0.08, ease(a)).toFixed(2);
+      } else if (u < U.dive) {
+        dl = 'высота'; du = 'м'; dv = fmt(lerp(400, 0, seg(u, 13.0, U.dive))); sl = 'скорость'; su = 'м/с'; sv = '62,0';
+      } else if (u < U.surf) {                          /* under water: depth */
+        const d = u < 21.5 ? lerp(0, 640, ease(seg(u, U.dive, 21.5))) : lerp(640, 0, ease(seg(u, U.swap - 0.4, U.surf)));
+        dl = 'глубина'; du = 'м'; dv = fmt(d); sl = 'скорость'; su = 'м/с';
+        sv = (u > 21.0 && u < U.swap - 0.4 ? 0.3 : 4.5).toFixed(1);
+      } else {
+        dl = 'высота'; du = 'м'; dv = fmt(lerp(0, 120, seg(u, U.surf, 25))); sl = 'скорость'; su = 'м/с'; sv = '14,0';
+      }
+      $('dist-l').textContent = dl; $('dist').textContent = dv; $('dist-u').textContent = du;
+      $('spd-l').textContent = sl; $('spd').textContent = String(sv).replace('.', ','); $('spd-u').textContent = su;
+      $('o2').textContent = String(Math.round(100 - seg(u, 3, 26) * 6));
+      $('link').textContent = water ? 'гидрофон' : 'стабильна';
+      $('cd').textContent = '00:' + String(Math.ceil(12 * (1 - seg(u, 6.0, 8.4)))).padStart(2, '0');
+    }
+
+    /* ---- page UI ---- */
+    const out = seg(u, 0.15, 0.8);
+    el.intro.style.opacity = 1 - out;
+    el.intro.style.transform = 'translateY(' + (-out * 40).toFixed(1) + 'px)';
+    el.intro.style.pointerEvents = out > 0.6 ? 'none' : 'auto';
+    el.intro.style.visibility = out >= 1 ? 'hidden' : 'visible';
+    const cardA = clamp(seg(u, 21.0, 21.5) - seg(u, 22.4, 22.8));
+    el.card.style.opacity = cardA;
+    el.card.style.pointerEvents = cardA > 0.6 ? 'auto' : 'none';
+    el.card.style.transform = 'translateY(' + ((1 - cardA) * 16).toFixed(1) + 'px)';
+    el.end.style.opacity = seg(u, 25.2, 25.8);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

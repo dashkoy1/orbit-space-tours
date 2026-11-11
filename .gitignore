@@ -1,0 +1,11 @@
+# sources and junk stay local; the site needs only index.html + video/
+frames/
+_src/
+_to_delete/
+.DS_Store
+.claude/settings.local.json
+
+# private notes stay local
+CLAUDE.md
+space-planets-site.md
+.claude/
