@@ -338,7 +338,7 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
      Edge of the visor comes from img/visor_dist.png (build_helmet.py): distance into the glass from the rim.
      Tuning panel: add ?glass to the URL or press G. */
   const RIM_SCALE = parseFloat(getComputedStyle($('rim')).getPropertyValue('--rim-scale')) || 1.38;   /* must match #rim */
-  const GLASS = { refr: 0.035, width: 0.55, chroma: 0.6, edge: 0.6, glare: 0.4, barrel: 0.04 };
+  const GLASS = { refr: 0.048, width: 0.35, chroma: 0.82, edge: 0.91, glare: 1.09, barrel: 0.2 };   /* chosen 12.11 */
   try { Object.assign(GLASS, JSON.parse(localStorage.getItem('orbit-glass') || '{}')); } catch (e) {}
   const glass = (() => {
     const c = $('glass');
