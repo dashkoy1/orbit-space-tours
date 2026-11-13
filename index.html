@@ -23,7 +23,9 @@
   --u:min(calc(100vw / 1920), calc(100vh / 1080));
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--mono)}
+html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--text);font-weight:300}
+/* Neuropol X words as outlines (img/type/words.js, np()): sit on the text baseline, take the text colour */
+.npw{display:inline-block;height:1.2em;vertical-align:-.227em;fill:currentColor;overflow:visible}
 body{overflow-x:hidden}
 #stage{position:fixed;inset:0;overflow:hidden;background:var(--void)}
 #film,#fx{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -57,7 +59,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 #chin i{width:6px;height:6px;border-radius:50%;background:var(--target);box-shadow:0 0 8px var(--target)}
 
 /* ---------- HUD (placeholder) ---------- */
-#hud{position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;pointer-events:none;color:var(--hud);
+#hud{font-family:var(--mono);position:absolute;left:2.2vw;right:2.2vw;top:3vh;bottom:7.5vh;pointer-events:none;color:var(--hud);
   font-size:clamp(10px,1.05vw,14px);letter-spacing:.14em;text-transform:uppercase;font-variant-numeric:tabular-nums;
   text-shadow:0 0 12px rgba(143,233,255,.45),0 1px 3px rgba(0,0,0,.9);opacity:0}
 .h{position:absolute;opacity:0;transition:opacity .25s linear}
@@ -71,7 +73,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 #boot span.on{opacity:1}
 #boot em{font-style:normal;color:var(--target)}
 #say{left:50%;top:50%;transform:translate(-50%,-50%);width:min(80%,900px);text-align:center;
-  font-family:var(--display);font-weight:400;font-size:clamp(20px,3.2vw,46px);letter-spacing:0;line-height:1.2;text-transform:none;color:var(--ink);text-wrap:balance;text-shadow:0 2px 24px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)}
+  font-family:var(--text);font-weight:400;font-size:clamp(20px,3vw,42px);letter-spacing:0;line-height:1.35;text-transform:none;color:var(--ink);text-wrap:balance;filter:drop-shadow(0 2px 14px rgba(0,0,0,.85)) drop-shadow(0 0 1px rgba(0,0,0,.6))}
 #reticle{left:50%;top:50%;width:clamp(90px,11vw,150px);aspect-ratio:1;transform:translate(-50%,-50%)}
 #reticle::before,#reticle::after{content:"";position:absolute;inset:0;border:1px solid var(--target);border-radius:50%;opacity:.8}
 #reticle::after{inset:-14%;border-style:dashed;opacity:.35;animation:spin 14s linear infinite}
@@ -121,7 +123,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 /* ---------- tour card + end card ---------- */
 .panel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:16px;opacity:0;pointer-events:none}
 .panel .eyebrow{color:var(--target);margin:0}
-.panel h2{font-family:var(--display);font-weight:600;font-size:clamp(30px,5.4vw,80px);margin:0;line-height:1.05;text-shadow:0 2px 30px rgba(0,0,0,.7)}
+.panel h2{font-weight:400;font-size:clamp(30px,5vw,76px);margin:0;line-height:1.1;filter:drop-shadow(0 2px 18px rgba(0,0,0,.7))}
 .panel p{margin:0;max-width:46ch;font-size:13px;line-height:1.65;color:var(--ink-dim)}
 #card{justify-content:flex-start;padding-top:20vh}
 #card .facts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:4px}
@@ -135,7 +137,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 #scan{background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px),linear-gradient(90deg,rgba(255,0,170,.18),rgba(0,240,255,.18));mix-blend-mode:screen}
 #alarm{background:radial-gradient(90% 80% at 50% 50%,rgba(255,30,60,.0) 30%,rgba(255,20,50,.75) 100%)}
 #black{background:#000}
-#glitchtext{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-family:var(--display);font-size:clamp(22px,4vw,56px);color:#fff;
+#glitchtext{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-size:clamp(22px,4vw,56px);color:#fff;
   text-shadow:3px 0 #ff00aa,-3px 0 #00f0ff;letter-spacing:.06em;opacity:0;pointer-events:none;white-space:nowrap}
 #hud.red{color:#ff4d6d;text-shadow:0 0 12px rgba(255,60,90,.6),0 1px 3px rgba(0,0,0,.9)}
 #hud.red .h small{color:rgba(255,120,140,.7)}
@@ -145,7 +147,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 /* ---------- final: boarding pass ---------- */
 #final{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;opacity:0;pointer-events:none}
 #final .eyebrow{margin:0;color:var(--hud)}
-#final h2{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,56px);margin:0;text-align:center;line-height:1.08}
+#final h2{font-weight:400;font-size:clamp(26px,4vw,56px);margin:0;text-align:center;line-height:1.08}
 .picks{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .picks button{font:inherit;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:rgba(4,10,16,.6);border:1px solid rgba(238,244,248,.35);border-radius:999px;padding:11px 18px;cursor:pointer}
 .picks button[aria-pressed="true"]{background:var(--ink);color:var(--void);border-color:var(--ink)}
@@ -155,12 +157,12 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 .pass.on{transform:none;opacity:1}
 .pass .main{padding:22px 26px;display:flex;flex-direction:column;gap:14px;border-right:2px dashed #b9b3a2}
 .pass .top{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.2em;text-transform:uppercase}
-.pass .top b{font-family:var(--display);letter-spacing:.3em;font-size:16px}
-.pass .route{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:600;font-size:clamp(20px,3vw,32px)}
+.pass .top b{font-size:18px}
+.pass .route{display:flex;align-items:center;gap:14px;font-weight:400;font-size:clamp(20px,3vw,32px)}
 .pass .route i{flex:1;height:2px;background:repeating-linear-gradient(90deg,#0b0f14 0 8px,transparent 8px 14px);position:relative}
 .pass .route i::after{content:"✦";position:absolute;right:-4px;top:-11px;font-style:normal;font-size:16px}
 .pass .grid{display:grid;grid-template-columns:repeat(4,auto);gap:10px 18px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5d5a52}
-.pass .grid b{display:block;margin-top:3px;font-size:14px;letter-spacing:.04em;color:#0b0f14;font-family:var(--mono);font-weight:500}
+.pass .grid b{display:block;margin-top:3px;font-size:15px;letter-spacing:.02em;color:#0b0f14;font-weight:500}
 .pass .stub{padding:22px 18px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5d5a52}
 .pass .stub b{display:block;color:#0b0f14;font-size:14px;letter-spacing:.04em;margin-top:3px}
 .pass .bars{height:54px;background:repeating-linear-gradient(90deg,#0b0f14 0 2px,transparent 2px 4px,#0b0f14 4px 5px,transparent 5px 8px,#0b0f14 8px 11px,transparent 11px 13px)}
@@ -269,6 +271,7 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 <div id="track"></div>
 
 <div id="glasspanel" aria-hidden="true"></div>
+<script src="img/type/words.js"></script>
 <script>
 (() => {
   /* ===== the film: all clips back to back in one all-intra mp4 (montage by build_video.py) ===== */
@@ -538,7 +541,7 @@ void main() {
   function sel(t) {
     picks.forEach((b, i) => b.setAttribute('aria-pressed', String(i === t)));
     const T = TOURS[t], seat = String(3 + t * 4).padStart(2, '0') + 'A';
-    $('p-to').textContent = T.to; $('p-tour').textContent = T.name; $('p-len').textContent = T.len; $('p-price').textContent = T.price;
+    np('p-to', T.to.toUpperCase().replace('KEPLER-22B', 'KEPLER-22b')); $('p-tour').textContent = T.name; $('p-len').textContent = T.len; $('p-price').textContent = T.price;
     $('p-seat').textContent = seat + ' · иллюм.'; $('p-seat2').textContent = seat; $('p-gate').textContent = 'G' + (4 + t); $('p-flight').textContent = 'OR-22' + (t + 1) + String(t * 7 + 1).padStart(2, '0');
     const ps = $('pass'); ps.classList.remove('on'); void ps.offsetWidth; ps.classList.add('on');
   }
@@ -551,6 +554,18 @@ void main() {
   const on = (id, v) => $(id).classList.toggle('on', v);
   const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/\s/g, ' ');
   const setText = (id, v) => { const e = $(id); if (e.textContent !== v) e.textContent = v; };
+  /* text in Neuropol X outlines, word by word so it wraps like text; a word not in words.js falls back to the text font */
+  function np(e, text) {
+    const NP = window.NP_TYPE || { h: 1200, words: {} };
+    if (typeof e === 'string') e = $(e);
+    if (!e || e.dataset.np === text) return;
+    e.dataset.np = text; e.setAttribute('aria-label', text);
+    e.innerHTML = text.split(' ').map(w => { const g = NP.words[w];
+      return g ? '<svg class="npw" viewBox="0 0 ' + g[0] + ' ' + NP.h + '" style="width:' + (g[0] / NP.h * 1.2).toFixed(3) + 'em" aria-hidden="true"><path d="' + g[1] + '"/></svg>'
+               : '<span>' + w + '</span>'; }).join(' ');
+  }
+  np('glitchtext', 'СИГНАЛ ПОТЕРЯН'); np(document.querySelector('#final h2'), 'КУДА ЛЕТИМ?');
+  np(document.querySelector('.pass .top b'), 'ORBIT'); np(document.querySelector('.pass .route span'), 'ЗЕМЛЯ');
   let lastKey = '', curTour = -1, cardTour = -2;
 
   function frame(now) {
@@ -649,7 +664,7 @@ void main() {
     let sayT = '', sayOn = false;
     if (u > 3.1 && u < 4.4) { sayT = 'Дышите спокойно. Мы взлетаем.'; sayOn = true; }
     JUMPS.forEach((J, k) => { if (u > J + 0.5 && u < J + 1.6) { sayT = TOURS[k].say; sayOn = true; } });
-    if (sayT) setText('say', sayT);
+    if (sayT) np('say', sayT);
     on('say', sayOn && !cardOn);
     on('warn', u > M.card3 + 1.5 && u < M.end + 0.3);
 
@@ -684,7 +699,7 @@ void main() {
     [M.card0, M.card1, M.card2, M.card3].forEach((c, k) => { const a = clamp(seg(u, c - 0.4, c + 0.1) - seg(u, c + 1.1, c + 1.5)); if (a > cardA) { cardA = a; cardT = k; } });
     if (cardT >= 0 && cardT !== cardTour) {
       const T = TOURS[cardT]; cardTour = cardT;
-      setText('card-eye', T.eye); setText('card-h', T.name); setText('card-p', T.p);
+      setText('card-eye', T.eye); np('card-h', T.name.toUpperCase()); setText('card-p', T.p);
       $('card-facts').innerHTML = T.facts.map((f, i) => '<span' + (i === 2 ? ' class="price"' : '') + '>' + f + '</span>').join('');
     }
     el.card.style.opacity = cardA;
