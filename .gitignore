@@ -13,3 +13,5 @@ _build/
 compare_quality.png
 helmet_*.jpg
 _helmet_*.jpg
+AGENTS.md
+.Codex/
