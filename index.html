@@ -6,7 +6,7 @@
 <title>ORBIT · прототип: Земля → «Глубина»</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;500&family=Unbounded:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* Prototype v2. Helmet frame = generated image (img/helmet.webp); HUD below is still a temporary placeholder.
    Layout: fixed full-screen stage, a tall scroll track drives a scene timeline measured in "units" (1 unit ≈ one screen of scroll). */
@@ -18,6 +18,9 @@
   --target:#3df0d8; --warn:#ffb057;
   --display:"Unbounded","Arial Black",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --text:"Exo 2",system-ui,sans-serif;
+  /* 1 design px of the Figma frame (1920x1080), fitted into the screen */
+  --u:min(calc(100vw / 1920), calc(100vh / 1080));
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--void);color:var(--ink);font-family:var(--mono)}
@@ -78,28 +81,42 @@ body.gl #glass{display:block} body.gl #film{visibility:hidden}
 #course b{color:var(--warn)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ---------- page UI: intro ---------- */
-#intro{position:absolute;inset:0;display:flex;flex-direction:column;will-change:opacity,transform}
-header{display:flex;align-items:center;gap:28px;padding:22px clamp(16px,4vw,48px);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
-.logo{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.3em;margin-right:auto}
-header nav{display:flex;gap:28px;color:var(--ink-dim)}
+/* ---------- page UI: intro (Figma «Дизайн - космос», node 1:73) ----------
+   Positions are design px from the frame centre: the Earth of the film sits in the middle between the two headings.
+   Headings and logo are Neuropol X outlines (img/type, build_type.py) until a web licence for the font is bought. */
+#intro{position:absolute;inset:0;will-change:opacity,transform;font-family:var(--text);font-weight:300;color:#f2f2f2}
+#intro > *{position:absolute;left:50%;transform:translateX(-50%)}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .btn{font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid rgba(238,244,248,.45);
   border-radius:999px;padding:12px 22px;cursor:pointer;transition:background .2s,color .2s}
 .btn:hover{background:var(--ink);color:var(--void)}
 .btn:focus-visible{outline:2px solid var(--hud);outline-offset:3px}
 .btn.solid{background:var(--ink);color:var(--void);border-color:var(--ink)}
 .btn.solid:hover{background:transparent;color:var(--ink)}
-.hero{margin-top:auto;padding:0 clamp(16px,4vw,48px) clamp(64px,11vh,120px);max-width:980px}
 .eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--hud);margin:0 0 18px}
-h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);line-height:1.02;margin:0 0 22px;text-wrap:balance;letter-spacing:-.01em}
-.sub{font-size:clamp(13px,1.15vw,16px);line-height:1.65;color:var(--ink-dim);max-width:52ch;margin:0 0 28px;letter-spacing:.02em}
-.cta{display:flex;flex-wrap:wrap;align-items:center;gap:18px}
-.hint{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim)}
-.hint::after{content:" ↓";display:inline-block;animation:bob 1.6s ease-in-out infinite}
-@keyframes bob{50%{transform:translateY(5px)}}
-.stats{position:absolute;right:clamp(16px,4vw,48px);bottom:clamp(64px,11vh,120px);display:flex;flex-direction:column;gap:14px;text-align:right;
-  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
-.stats b{display:block;font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:0;color:var(--ink)}
+
+#intro header{top:calc(50% - 493 * var(--u));width:calc(1098 * var(--u));height:calc(58 * var(--u));display:flex;align-items:center}
+#intro .logo{display:block;height:calc(48 * var(--u));margin-right:calc(128 * var(--u))}
+#intro .logo img{height:100%;display:block}
+#intro nav{display:flex;gap:calc(80 * var(--u))}
+#intro nav button,#intro .book{font:inherit;color:#f2f2f2;background:none;border:0;padding:0;cursor:pointer;text-transform:uppercase;white-space:nowrap;
+  font-size:max(11px,calc(16 * var(--u)));transition:color .2s}
+#intro nav button:hover{color:#6decff}
+#intro .book{margin-left:auto;height:100%;width:calc(208 * var(--u));border:1px solid #fff;border-radius:999px;color:#fff;font-weight:500;
+  font-size:max(11px,calc(18.5 * var(--u)));letter-spacing:-.06em;transition:background .2s,color .2s}
+#intro .book:hover{background:#fff;color:#171214}
+#intro button:focus-visible{outline:2px solid #6decff;outline-offset:4px}
+#intro .tagline{top:calc(50% - 369 * var(--u));margin:0;white-space:nowrap;color:#6decff;text-transform:uppercase;
+  font-size:max(9px,calc(20 * var(--u)));letter-spacing:.46em;padding-left:.46em}
+#intro .h-top{top:calc(50% - 321 * var(--u));width:calc(1212 * var(--u))}
+#intro .h-bot{top:calc(50% + 167 * var(--u));width:calc(1227 * var(--u))}
+#intro .h-top img,#intro .h-bot img{width:100%;display:block}
+#intro .lead{top:calc(50% + 289 * var(--u));margin:0;text-align:center;white-space:nowrap;font-size:max(13px,calc(29 * var(--u)));line-height:1.2}
+#intro .cta{top:calc(50% + 392 * var(--u));display:flex;align-items:center;gap:calc(20 * var(--u));margin-left:calc(-11.5 * var(--u))}
+#intro .go{width:calc(327 * var(--u));height:calc(91 * var(--u));border:0;border-radius:999px;background:#fff;color:#171214;cursor:pointer;
+  font:500 max(12px,calc(29 * var(--u)))/1 var(--text);letter-spacing:-.06em;text-transform:uppercase;transition:background .2s,color .2s}
+#intro .go:hover{background:#6decff}
+#intro .hint{margin:0;white-space:nowrap;opacity:.8;text-transform:uppercase;font-size:max(9px,calc(19 * var(--u)));letter-spacing:.08em;line-height:1.4}
 
 /* ---------- tour card + end card ---------- */
 .panel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:16px;opacity:0;pointer-events:none}
@@ -186,23 +203,22 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,6.4vw,96px);l
 
   <div id="intro">
     <header>
-      <span class="logo">ORBIT</span>
-      <nav><button class="btn" data-go="tours" type="button" style="border:0;padding:0">Туры</button></nav>
-      <button class="btn" id="book" type="button">Забронировать</button>
+      <span class="logo"><img src="img/type/logo.svg" alt="ORBIT"></span>
+      <nav aria-label="Разделы">
+        <button data-go="tours" type="button">Туры</button>
+        <button data-go="pick" type="button">Выбрать планету</button>
+        <button data-go="about" type="button">О турагентстве</button>
+      </nav>
+      <button class="book" id="book" type="button">Забронировать</button>
     </header>
-    <div class="hero">
-      <p class="eyebrow">Космическое турагентство · туры за пределы Земли · сезон 2077</p>
-      <h1>Вы видели всё на Земле?<br>Тогда пора дальше</h1>
-      <p class="sub">Четыре планеты, четыре непохожих мира. Туры от 3 до 10 дней: без визы, но с невесомостью.</p>
-      <div class="cta">
-        <button class="btn solid" id="go" type="button">Выбрать планету</button>
-        <span class="hint">Листайте, чтобы надеть шлем</span>
-      </div>
-    </div>
-    <div class="stats">
-      <div><b>4</b>планеты</div>
-      <div><b>12 000</b>световых лет за неделю</div>
-      <div><b>0</b>пассажиров захотели домой раньше</div>
+    <p class="tagline">Космическое турагентство · туры за пределы Земли · сезон 2077</p>
+    <h1 class="sr">Вы видели всё на Земле? Тогда пора дальше!</h1>
+    <div class="h-top" aria-hidden="true"><img src="img/type/h1-top.svg" alt=""></div>
+    <div class="h-bot" aria-hidden="true"><img src="img/type/h1-bot.svg" alt=""></div>
+    <p class="lead">Четыре новые планеты, непохожих мира. Организовываем туры<br>от 3 до 10 дней: без визы, но в полной невесомости</p>
+    <div class="cta">
+      <button class="go" id="go" type="button">Выбрать планету</button>
+      <p class="hint">Листайте ниже,<br>чтобы надеть шлем</p>
     </div>
   </div>
 
@@ -510,6 +526,8 @@ void main() {
   const toU = u => scrollTo({ top: (u / TOTAL) * maxScroll(), behavior: reduce ? 'auto' : 'smooth' });
   $('go').addEventListener('click', () => toU(TOTAL - 1.2));
   document.querySelector('[data-go="tours"]').addEventListener('click', () => toU(M.t0 + 0.2));
+  document.querySelector('[data-go="pick"]').addEventListener('click', () => toU(TOTAL - 1.2));
+  document.querySelector('[data-go="about"]').addEventListener('click', () => toU(TOTAL - 1.2));   /* no «about» section yet: final screen */
   $('book').addEventListener('click', () => toU(TOTAL - 1.2));
   $('card-book').addEventListener('click', () => { sel(curTour < 0 ? 0 : curTour); toU(TOTAL - 1.2); });
 
